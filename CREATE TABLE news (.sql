@@ -1,0 +1,8 @@
+CREATE TABLE news (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    image TEXT, -- URL gambar
+    content TEXT NOT NULL,
+    date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

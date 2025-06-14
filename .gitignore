@@ -1,0 +1,17 @@
+# Node.js
+node_modules/
+npm-debug.log
+.env # Jika nanti Anda menggunakan file .env untuk env variables
+
+# Docker
+.dockerignore
+
+# Database (jika ada file data yang dihasilkan secara lokal)
+data/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

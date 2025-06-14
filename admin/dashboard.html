@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="../style.css">
-</head>
+    <title>Admin Dashboard - Portal Berita</title>
+    <link rel="stylesheet" href="../style.css"> </head>
 <body class="admin-page">
     <header class="admin-header">
         <h1>Admin Dashboard</h1>
@@ -15,12 +14,12 @@
     <main>
         <div class="form-container">
             <h2>Tambah Berita Baru</h2>
-            <form id="add-news-form">
-                <div class="form-group">
-                    <label for="news-title">Judul Berita</label>
-                    <input type="text" id="news-title" placeholder="Tulis judul di sini..." required>
+            <form id="newsForm">
+                <input type="hidden" id="newsId" name="newsId"> <div class="form-group">
+                    <label for="title">Judul Berita:</label>
+                    <input type="text" id="title" name="title" required>
                 </div>
-                 <div class="form-group">
+                <div class="form-group">
                     <label for="news-category">Kategori</label>
                     <select id="news-category" required>
                         <option value="Teknologi">Teknologi</option>
@@ -34,19 +33,41 @@
                     <input type="text" id="news-image-url" placeholder="contoh: gambar/nama-file.jpg" required>
                 </div>
                 <div class="form-group">
-                    <label for="news-content">Isi Berita</label>
-                    <textarea id="news-content" rows="10" placeholder="Tulis isi berita lengkap di sini. Anda bisa menggunakan tag HTML sederhana seperti <b> untuk tebal atau <a> untuk link." required></textarea>
+                    <label for="content">Isi Berita:</label>
+                    <textarea id="content" name="content" rows="10" required></textarea>
                 </div>
-                <button type="submit">Upload Berita</button>
+                <div class="form-group">
+                    <label for="date">Tanggal (Opsional, default hari ini):</label>
+                    <input type="datetime-local" id="date" name="date">
+                </div>
+                <button type="submit" id="submitButton">Tambah Berita</button>
+                <button type="button" id="cancelEditButton" style="display:none; background-color: #6c757d;">Batal Edit</button>
+                <p id="formMessage" class="error-message"></p>
             </form>
         </div>
 
-        <div class="news-preview">
-            <h2>Daftar Berita (Live Preview)</h2>
-            <div id="admin-news-list" class="news-grid">
-                </div>
+        <div class="news-list-container form-container" style="margin-top: 20px;">
+            <h2>Daftar Berita</h2>
+            <table id="newsTable" style="width:100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">ID</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Judul</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Kategori</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Tanggal</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+            <p id="newsListMessage" class="error-message"></p>
         </div>
     </main>
+
+    <footer>
+        <p>&copy; 2025 Portal Berita Anda</p>
+    </footer>
 
     <script src="admin.js"></script>
 </body>

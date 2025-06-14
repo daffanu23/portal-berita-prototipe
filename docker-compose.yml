@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17-alpine # Menggunakan PostgreSQL versi 17 (alpine adalah versi ringan)
+    container_name: portal_berita_db # Nama kontainer Docker untuk database
+    environment:
+      POSTGRES_DB: portal_berita # Nama database yang akan dibuat
+      POSTGRES_USER: user_berita # Username untuk mengakses database
+      POSTGRES_PASSWORD: admin123 # Password untuk user database
+    volumes:
+      - db_data:/var/lib/postgresql/data # Penyimpanan data persisten
+    ports:
+      - "5432:5432" # Mem-expose port PostgreSQL ke host Anda
+    restart: unless-stopped # Kontainer akan selalu restart kecuali dihentikan manual
+
+volumes:
+  db_data: # Definisi volume untuk data database

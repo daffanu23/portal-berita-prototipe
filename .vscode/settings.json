@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "portal_berita_local",
+            "group": "localhost",
+            "database": "portal_berita",
+            "username": "user_berita"
+        }
+    ]
+}
