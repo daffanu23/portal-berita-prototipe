@@ -1,18 +1,19 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
   db:
-    image: postgres:17-alpine # Menggunakan PostgreSQL versi 17 (alpine adalah versi ringan)
-    container_name: portal_berita_db # Nama kontainer Docker untuk database
+    image: postgres:latest # Menggunakan versi PostgreSQL terbaru
+    container_name: portal_berita_db_new # Nama container baru agar tidak konflik
     environment:
-      POSTGRES_DB: portal_berita # Nama database yang akan dibuat
-      POSTGRES_USER: user_berita # Username untuk mengakses database
-      POSTGRES_PASSWORD: admin123 # Password untuk user database
+      POSTGRES_DB: portal_berita_new # Nama database baru
+      POSTGRES_USER: user_baru # Username baru
+      POSTGRES_PASSWORD: mysecretpassword # Password baru yang umum untuk debugging
     volumes:
-      - db_data:/var/lib/postgresql/data # Penyimpanan data persisten
+      - db_data_new:/var/lib/postgresql/data # Volume data baru
     ports:
-      - "5432:5432" # Mem-expose port PostgreSQL ke host Anda
-    restart: unless-stopped # Kontainer akan selalu restart kecuali dihentikan manual
+      - "5432:5432"
+    restart: unless-stopped
 
 volumes:
-  db_data: # Definisi volume untuk data database
+  db_data_new: # Definisi volume baru

@@ -1,243 +1,214 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Elemen-elemen DOM yang akan sering digunakan
-    const loginForm = document.getElementById('loginForm');
-    const newsForm = document.getElementById('newsForm');
-    const newsTableBody = document.querySelector('#newsTable tbody');
-    const submitButton = document.getElementById('submitButton');
-    const cancelEditButton = document.getElementById('cancelEditButton');
-    const formMessage = document.getElementById('formMessage');
-    const newsListMessage = document.getElementById('newsListMessage');
+    // Fungsi untuk memastikan user sudah login sebelum mengakses dashboard
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+        // Jika tidak ada token, arahkan kembali ke halaman login
+        window.location.href = 'index.html';
+        return; // Hentikan eksekusi script ini
+    }
+
+    const newsForm = document.getElementById('news-form');
+    const newsIdInput = document.getElementById('news-id');
+    const titleInput = document.getElementById('title');
+    const categorySelect = document.getElementById('news-category'); // SESUAIKAN ID INI (select)
+    const imageInput = document.getElementById('news-image-url'); // SESUAIKAN ID INI (input text)
+    const contentInput = document.getElementById('content');
+    const submitButton = document.getElementById('submit-button');
+    const clearFormButton = document.getElementById('clear-form-button');
+    const formMessage = document.getElementById('form-message');
+    const newsList = document.getElementById('news-list');
     const logoutButton = document.getElementById('logout-button');
-    const errorMessage = document.getElementById('errorMessage'); // Untuk halaman login
 
-    // Ambil elemen kategori dan image yang baru
-    const newsCategorySelect = document.getElementById('news-category'); // Ini yang baru
-    const newsImageUrlInput = document.getElementById('news-image-url'); // Ini yang baru
+    let editingNewsId = null; // Menyimpan ID berita yang sedang diedit
 
-    const API_BASE_URL = 'http://localhost:3000/api/news';
-
-    // --- Logika Otentikasi Sederhana ---
-    // (Untuk proyek prototipe, kita akan menggunakan token di localStorage)
-    const ADMIN_TOKEN_KEY = 'adminToken';
-    const MOCK_USERNAME = 'admin';
-    const MOCK_PASSWORD = 'password'; // JANGAN GUNAKAN INI DI PRODUKSI!
-
-    // Fungsi untuk memeriksa status login
-    function checkLoginStatus() {
-        const token = localStorage.getItem(ADMIN_TOKEN_KEY);
-        if (window.location.pathname.includes('dashboard.html')) {
-            if (!token) {
-                window.location.href = 'index.html'; // Redirect ke halaman login jika belum login
-            } else {
-                displayNewsList(); // Jika sudah login, tampilkan daftar berita
-            }
-        } else if (window.location.pathname.includes('index.html')) {
-            if (token) {
-                window.location.href = 'dashboard.html'; // Redirect ke dashboard jika sudah login
-            }
-        }
+    // Fungsi untuk menampilkan pesan (sukses/error)
+    function showMessage(message, isError = false) {
+        formMessage.textContent = message;
+        formMessage.style.color = isError ? 'red' : 'green';
+        setTimeout(() => {
+            formMessage.textContent = '';
+        }, 3000);
     }
 
-    // Handle Login Form Submission
-    if (loginForm) {
-        loginForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (username === MOCK_USERNAME && password === MOCK_PASSWORD) {
-                // Simpan token dummy atau status login
-                localStorage.setItem(ADMIN_TOKEN_KEY, 'mock-admin-token');
-                window.location.href = 'dashboard.html'; // Redirect ke dashboard
-            } else {
-                errorMessage.textContent = 'Username atau password salah!';
-            }
-        });
+    // Fungsi untuk membersihkan form
+    function clearForm() {
+        newsIdInput.value = '';
+        titleInput.value = '';
+        categorySelect.value = ''; // Reset select dropdown
+        imageInput.value = '';
+        contentInput.value = '';
+        submitButton.textContent = 'Tambah Berita';
+        editingNewsId = null;
     }
 
-    // Handle Logout Button
-    if (logoutButton) {
-        logoutButton.addEventListener('click', function() {
-            localStorage.removeItem(ADMIN_TOKEN_KEY); // Hapus token
-            window.location.href = 'index.html'; // Redirect ke halaman login
-        });
-    }
-
-    // Panggil saat halaman dimuat
-    checkLoginStatus();
-
-    // --- Logika CRUD Berita ---
-
-    // Fungsi untuk menampilkan daftar berita
-    async function displayNewsList() {
+    // Fungsi untuk memuat daftar berita
+    async function loadNews() {
+        newsList.innerHTML = '<p>Memuat daftar berita...</p>';
         try {
-            newsListMessage.textContent = 'Memuat daftar berita...';
-            const response = await fetch(API_BASE_URL);
+            const response = await fetch('http://localhost:3000/api/news', {
+                headers: {
+                    'Authorization': `Bearer ${adminToken}` // Kirim token untuk autentikasi GET
+                }
+            });
             if (!response.ok) {
+                 if (response.status === 401 || response.status === 403) {
+                    // Jika token tidak valid, paksa logout
+                    localStorage.removeItem('adminToken');
+                    window.location.href = 'index.html';
+                    return;
+                }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const news = await response.json();
+            const newsData = await response.json();
 
-            newsTableBody.innerHTML = ''; // Kosongkan tabel
-            if (news.length === 0) {
-                newsTableBody.innerHTML = '<tr><td colspan="5">Belum ada berita. Tambahkan yang pertama!</td></tr>';
-                newsListMessage.textContent = ''; // Hapus pesan loading
+            if (newsData.length === 0) {
+                newsList.innerHTML = '<p>Belum ada berita yang dipublikasikan.</p>';
                 return;
             }
 
-            // Urutkan dari yang terbaru
-            news.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            news.forEach(item => {
-                const row = newsTableBody.insertRow();
-                row.insertCell(0).textContent = item.id;
-                row.insertCell(1).textContent = item.title;
-                row.insertCell(2).textContent = item.category;
-                row.insertCell(3).textContent = new Date(item.date).toLocaleDateString('id-ID');
-
-                const actionsCell = row.insertCell(4);
-                const editButton = document.createElement('button');
-                editButton.textContent = 'Edit';
-                editButton.classList.add('edit-button');
-                editButton.style.marginRight = '5px';
-                editButton.onclick = () => editNews(item);
-
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Hapus';
-                deleteButton.classList.add('delete-button');
-                deleteButton.style.backgroundColor = '#DC3545'; // Warna merah
-                deleteButton.style.marginLeft = '5px';
-                deleteButton.onclick = () => deleteNews(item.id);
-
-                actionsCell.appendChild(editButton);
-                actionsCell.appendChild(deleteButton);
+            newsList.innerHTML = '';
+            newsData.sort((a, b) => new Date(b.date) - new Date(a.date)); // Urutkan dari terbaru
+            newsData.forEach(newsItem => {
+                const listItem = document.createElement('li');
+                listItem.className = 'news-list-item';
+                listItem.innerHTML = `
+                    <span>${newsItem.title} (${newsItem.category})</span>
+                    <div class="news-actions">
+                        <button class="edit-btn" data-id="${newsItem.id}">Edit</button>
+                        <button class="delete-btn" data-id="${newsItem.id}">Hapus</button>
+                    </div>
+                `;
+                newsList.appendChild(listItem);
             });
-            newsListMessage.textContent = ''; // Hapus pesan loading
         } catch (error) {
-            console.error('Error fetching news list:', error);
-            newsListMessage.textContent = `Gagal memuat daftar berita: ${error.message}`;
+            console.error('Error loading news:', error);
+            newsList.innerHTML = '<p>Gagal memuat daftar berita.</p>';
+            showMessage('Gagal memuat daftar berita.', true);
         }
     }
 
-    // Handle Form Submission (Tambah/Edit Berita)
-    if (newsForm) { // Pastikan elemen form ada sebelum menambahkan event listener
-        newsForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
+    // Event Listener untuk submit form (Tambah/Edit Berita)
+    newsForm.addEventListener('submit', async function(event) {
+        event.preventDefault(); // Mencegah reload halaman
 
-            const newsId = document.getElementById('newsId').value;
-            const title = document.getElementById('title').value;
-            const category = newsCategorySelect.value; // Ambil nilai dari SELECT baru
-            const image = newsImageUrlInput.value; // Ambil nilai dari INPUT URL baru
-            const content = document.getElementById('content').value;
-            let date = document.getElementById('date').value;
+        const news = {
+            title: titleInput.value,
+            category: categorySelect.value, // Ambil nilai dari select
+            image: imageInput.value,
+            content: contentInput.value
+        };
 
-            // Jika tanggal kosong, set ke tanggal saat ini
-            if (!date) {
-                date = new Date().toISOString();
-            } else {
-                // Pastikan format tanggal sesuai ISO 8601 untuk PostgreSQL TIMESTAMP WITH TIME ZONE
-                date = new Date(date).toISOString();
-            }
-
-            const newsData = { title, category, image, content, date };
-
-            try {
-                let response;
-                if (newsId) { // Jika ada newsId, berarti ini operasi EDIT (PUT)
-                    submitButton.textContent = 'Memperbarui...';
-                    response = await fetch(`${API_BASE_URL}/${newsId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(newsData),
-                    });
-                } else { // Jika tidak ada newsId, berarti ini operasi TAMBAH (POST)
-                    submitButton.textContent = 'Menambahkan...';
-                    response = await fetch(API_BASE_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(newsData),
-                    });
-                }
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-                }
-
-                formMessage.textContent = newsId ? 'Berita berhasil diperbarui!' : 'Berita berhasil ditambahkan!';
-                formMessage.style.color = 'green';
-                newsForm.reset(); // Kosongkan form
-                document.getElementById('newsId').value = ''; // Reset ID tersembunyi
-                submitButton.textContent = 'Tambah Berita'; // Kembalikan teks tombol
-                cancelEditButton.style.display = 'none'; // Sembunyikan tombol batal
-                displayNewsList(); // Muat ulang daftar berita
-            } catch (error) {
-                console.error('Error submitting news:', error);
-                formMessage.textContent = `Gagal ${newsId ? 'memperbarui' : 'menambahkan'} berita: ${error.message}`;
-                formMessage.style.color = 'red';
-                submitButton.textContent = newsId ? 'Perbarui Berita' : 'Tambah Berita'; // Kembalikan teks tombol
-            }
-        });
-    }
-
-    // Fungsi untuk mengisi form saat tombol edit diklik
-    function editNews(item) {
-        document.getElementById('newsId').value = item.id;
-        document.getElementById('title').value = item.title;
-        newsCategorySelect.value = item.category; // Set nilai SELECT
-        newsImageUrlInput.value = item.image || ''; // Set nilai INPUT URL, handle null
-        document.getElementById('content').value = item.content;
-        // Format tanggal untuk input datetime-local (YYYY-MM-DDTHH:MM)
-        const date = new Date(item.date);
-        const formattedDate = date.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
-        document.getElementById('date').value = formattedDate;
-
-        submitButton.textContent = 'Perbarui Berita';
-        cancelEditButton.style.display = 'inline-block'; // Tampilkan tombol batal
-        formMessage.textContent = ''; // Hapus pesan form sebelumnya
-
-        // Gulir ke atas form
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Handle Cancel Edit Button
-    if (cancelEditButton) {
-        cancelEditButton.addEventListener('click', () => {
-            newsForm.reset();
-            document.getElementById('newsId').value = '';
-            submitButton.textContent = 'Tambah Berita';
-            cancelEditButton.style.display = 'none';
-            formMessage.textContent = '';
-        });
-    }
-
-
-    // Fungsi untuk menghapus berita
-    async function deleteNews(id) {
-        if (!confirm('Apakah Anda yakin ingin menghapus berita ini?')) {
+        // Validasi sederhana untuk kategori (pastikan bukan opsi default kosong)
+        if (!news.category) {
+            showMessage('Kategori harus dipilih.', true);
             return;
         }
 
         try {
-            newsListMessage.textContent = 'Menghapus berita...';
-            const response = await fetch(`${API_BASE_URL}/${id}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+            let response;
+            const headers = { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}` // Kirim token untuk autentikasi
+            };
+
+            if (editingNewsId) {
+                // Mode Edit (PUT)
+                response = await fetch(`http://localhost:3000/api/news/${editingNewsId}`, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify(news)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                showMessage('Berita berhasil diupdate!');
+            } else {
+                // Mode Tambah (POST)
+                response = await fetch('http://localhost:3000/api/news', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(news)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                showMessage('Berita berhasil ditambahkan!');
             }
-            newsListMessage.textContent = 'Berita berhasil dihapus!';
-            newsListMessage.style.color = 'green';
-            displayNewsList(); // Muat ulang daftar berita
+            
+            clearForm(); // Bersihkan form setelah sukses
+            loadNews(); // Muat ulang daftar berita
         } catch (error) {
-            console.error('Error deleting news:', error);
-            newsListMessage.textContent = `Gagal menghapus berita: ${error.message}`;
-            newsListMessage.style.color = 'red';
+            console.error('Error saving news:', error);
+            showMessage('Gagal menyimpan berita. ' + error.message, true);
         }
-    }
+    });
+
+    // Event Listener untuk tombol Edit dan Hapus
+    newsList.addEventListener('click', async function(event) {
+        const target = event.target;
+        const newsId = target.dataset.id; // Ambil ID dari atribut data-id
+
+        if (target.classList.contains('edit-btn')) {
+            // Logika Edit
+            try {
+                const response = await fetch(`http://localhost:3000/api/news/${newsId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}` // Kirim token untuk autentikasi GET
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const newsToEdit = await response.json();
+                
+                // Isi form dengan data berita yang akan diedit
+                newsIdInput.value = newsToEdit.id;
+                titleInput.value = newsToEdit.title;
+                categorySelect.value = newsToEdit.category; // Isi select
+                imageInput.value = newsToEdit.image || ''; // Pastikan string kosong jika null
+                contentInput.value = newsToEdit.content;
+                submitButton.textContent = 'Update Berita';
+                editingNewsId = newsToEdit.id; // Set ID berita yang sedang diedit
+                
+                // Gulir ke bagian atas form
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            } catch (error) {
+                console.error('Error fetching news for edit:', error);
+                showMessage('Gagal memuat data berita untuk diedit.', true);
+            }
+        } else if (target.classList.contains('delete-btn')) {
+            // Logika Hapus
+            if (confirm('Anda yakin ingin menghapus berita ini?')) {
+                try {
+                    const response = await fetch(`http://localhost:3000/api/news/${newsId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${adminToken}` // Kirim token untuk autentikasi DELETE
+                        }
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    showMessage('Berita berhasil dihapus!');
+                    loadNews(); // Muat ulang daftar berita
+                } catch (error) {
+                    console.error('Error deleting news:', error);
+                    showMessage('Gagal menghapus berita. ' + error.message, true);
+                }
+            }
+        }
+    });
+
+    // Event Listener untuk tombol Clear Form
+    clearFormButton.addEventListener('click', clearForm);
+
+    // Event Listener untuk tombol Logout
+    logoutButton.addEventListener('click', function() {
+        localStorage.removeItem('adminToken'); // Hapus token
+        window.location.href = 'index.html'; // Arahkan kembali ke halaman login
+    });
+
+    // Muat berita saat halaman pertama kali dimuat
+    loadNews();
 });

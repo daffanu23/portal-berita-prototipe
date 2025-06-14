@@ -4,71 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Portal Berita</title>
-    <link rel="stylesheet" href="../style.css"> </head>
+    <link rel="stylesheet" href="../style.css"> <style>
+        /* Tambahan styling spesifik untuk admin */
+        .admin-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .admin-section h2 {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .news-list {
+            list-style: none;
+            padding: 0;
+        }
+        .news-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        .news-list-item:last-child {
+            border-bottom: none;
+        }
+        .news-actions button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+        .news-actions .edit-btn {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .news-actions .edit-btn:hover {
+            background-color: #e0a800;
+        }
+        .news-actions .delete-btn {
+            background-color: #dc3545;
+        }
+        .news-actions .delete-btn:hover {
+            background-color: #c82333;
+        }
+        #clear-form-button {
+            background-color: #6c757d; /* Abu-abu */
+            margin-left: 10px;
+        }
+        #clear-form-button:hover {
+            background-color: #5a6268;
+        }
+        /* Styling untuk select dropdown */
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            appearance: none; /* Menghilangkan styling default browser */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2C114.3L146.2%2C255.1L5.4%2C114.3c-2.8-2.8-2.8-7.2%2C0-10l10-10c2.8-2.8%2C7.2-2.8%2C10%2C0l120.8%2C120.8L267%2C94.3c2.8-2.8%2C7.2-2.8%2C10%2C0l10%2C10C289.8%2C107.1%2C289.8%2C111.5%2C287%2C114.3z%22%2F%3E%3C%2Fsvg%3E'); /* Custom arrow */
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-size: 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
 <body class="admin-page">
+
     <header class="admin-header">
         <h1>Admin Dashboard</h1>
-        <button id="logout-button">Logout</button>
+        <nav>
+            <a href="../index.html" style="color: white; text-decoration: none; margin-right: 15px;">Lihat Berita</a> <button id="logout-button" style="background-color: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Logout</button>
+        </nav>
     </header>
 
     <main>
-        <div class="form-container">
-            <h2>Tambah Berita Baru</h2>
-            <form id="newsForm">
-                <input type="hidden" id="newsId" name="newsId"> <div class="form-group">
+        <section class="admin-section">
+            <h2>Tambah / Edit Berita</h2>
+            <form id="news-form">
+                <input type="hidden" id="news-id"> <div class="form-group">
                     <label for="title">Judul Berita:</label>
-                    <input type="text" id="title" name="title" required>
+                    <input type="text" id="title" required>
                 </div>
+
                 <div class="form-group">
-                    <label for="news-category">Kategori</label>
+                    <label for="news-category">Kategori:</label>
                     <select id="news-category" required>
-                        <option value="Teknologi">Teknologi</option>
+                        <option value="">-- Pilih Kategori --</option> <option value="Teknologi">Teknologi</option>
                         <option value="Olahraga">Olahraga</option>
                         <option value="Gaya Hidup">Gaya Hidup</option>
                         <option value="Nasional">Nasional</option>
+                        <option value="Internasional">Internasional</option> <option value="Hiburan">Hiburan</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="news-image-url">URL Gambar</label>
-                    <input type="text" id="news-image-url" placeholder="contoh: gambar/nama-file.jpg" required>
-                </div>
-                <div class="form-group">
-                    <label for="content">Isi Berita:</label>
-                    <textarea id="content" name="content" rows="10" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="date">Tanggal (Opsional, default hari ini):</label>
-                    <input type="datetime-local" id="date" name="date">
-                </div>
-                <button type="submit" id="submitButton">Tambah Berita</button>
-                <button type="button" id="cancelEditButton" style="display:none; background-color: #6c757d;">Batal Edit</button>
-                <p id="formMessage" class="error-message"></p>
-            </form>
-        </div>
 
-        <div class="news-list-container form-container" style="margin-top: 20px;">
+                <div class="form-group">
+                    <label for="news-image-url">URL Gambar (Opsional):</label>
+                    <input type="text" id="news-image-url" placeholder="contoh: https://via.placeholder.com/400 atau gambar/nama-file.jpg">
+                    <small>Masukkan URL lengkap atau path relatif gambar Anda.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="content">Konten Berita:</label>
+                    <textarea id="content" rows="10" required></textarea>
+                </div>
+
+                <button type="submit" id="submit-button">Tambah Berita</button>
+                <button type="button" id="clear-form-button">Clear Form</button>
+            </form>
+            <p id="form-message" class="error-message" style="color: green;"></p>
+        </section>
+
+        <section class="admin-section">
             <h2>Daftar Berita</h2>
-            <table id="newsTable" style="width:100%; border-collapse: collapse; margin-top: 15px;">
-                <thead>
-                    <tr style="background-color: #f2f2f2;">
-                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">ID</th>
-                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Judul</th>
-                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Kategori</th>
-                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Tanggal</th>
-                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-            <p id="newsListMessage" class="error-message"></p>
-        </div>
+            <ul id="news-list" class="news-list">
+                <p>Memuat daftar berita...</p>
+            </ul>
+        </section>
     </main>
 
     <footer>
-        <p>&copy; 2025 Portal Berita Anda</p>
+        <p>&copy; 2025 Admin Portal Berita</p>
     </footer>
 
-    <script src="admin.js"></script>
-</body>
+    <script src="admin.js"></script> </body>
 </html>

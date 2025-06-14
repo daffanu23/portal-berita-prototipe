@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const newsContainer = document.getElementById('news-container');
 
-    async function displayNews() {
+    async function fetchAndDisplayNews() {
         try {
             // Ambil data berita dari API backend
             const response = await fetch('http://localhost:3000/api/news');
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Urutkan berita dari yang terbaru (jika API tidak mengurutkan secara default)
+            // Urutkan berita dari yang terbaru (opsional, bisa dilakukan di backend juga)
             newsData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             newsContainer.innerHTML = ''; // Kosongkan kontainer
@@ -40,5 +40,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    displayNews();
+    fetchAndDisplayNews();
 });
