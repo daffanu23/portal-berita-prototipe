@@ -3,24 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Berita Terkini</title>
+    <title>Portal Berita</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <header>
-        <h1>Portal Berita Prototipe</h1>
-        <p>Berita paling update dari seluruh dunia</p>
+        <div class="container">
+            <h1><a href="index.html">Portal Berita</a></h1>
+            <nav>
+                <a href="admin/admin.html">Admin</a>
+                <div id="user-info-section" style="margin-left: 20px; display: flex; align-items: center;">
+                    <span id="welcome-message" style="margin-right: 10px; color: white;"></span>
+                    <button id="user-login-btn" class="btn" style="background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Login / Daftar</button>
+                    <button id="user-logout-btn" class="btn" style="background-color: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: none;">Logout</button>
+                </div>
+            </nav>
+            <div class="filter-controls">
+                <label for="category-filter">Filter Kategori:</label>
+                <select id="category-filter">
+                    <option value="all">Semua Kategori</option>
+                    <option value="Teknologi">Teknologi</option>
+                    <option value="Olahraga">Olahraga</option>
+                    <option value="Gaya Hidup">Gaya Hidup</option>
+                    <option value="Nasional">Nasional</option>
+                    <option value="Internasional">Internasional</option>
+                    <option value="Hiburan">Hiburan</option>
+                </select>
+            </div>
+        </div>
     </header>
 
-    <main>
+    <main class="container">
         <h2>Berita Terbaru</h2>
-        <div id="news-container" class="news-grid">
-            </div>
+        <section id="news-container" class="news-grid">
+            <p>Memuat berita...</p>
+        </section>
     </main>
 
     <footer>
-        <p>&copy; 2025 Portal Berita Anda</p>
+        <div class="container">
+            <p>&copy; 2025 Portal Berita. All rights reserved.</p>
+        </div>
     </footer>
 
     <script src="app.js"></script>
