@@ -2,7 +2,7 @@
 require('dotenv').config(); // Load environment variables from .env file
 
 const express = require('express');
-const { Pool } = require('pg');
+const { Pool } = require('pg'); // Menggunakan PostgreSQL
 const cors = require('cors');
 const jwt = require('jsonwebtoken'); // Untuk JWT
 const bcrypt = require('bcryptjs'); // Untuk hashing password
@@ -32,7 +32,7 @@ pool.connect((err, client, release) => {
         return console.error('Error acquiring client', err.stack);
     }
     console.log('Connected to PostgreSQL at:', new Date().toLocaleString());
-    release();
+    release(); // Lepaskan client kembali ke pool
 });
 
 // Secret Key untuk JWT - HARUS ADA DI FILE .env
@@ -58,21 +58,32 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+// Middleware untuk otorisasi (hanya admin)
+const authorizeAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Akses ditolak: Hanya admin yang diizinkan.' });
+    }
+};
+
 // --- Rute Admin Login ---
 app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body;
 
-    if (username === 'admin') {
-        // HASH ADMIN123 INI HARUS SESUAI DENGAN YANG ANDA GENERATE.
-        // Contoh hash untuk 'admin123': '$2a$10$w4r2h.N/Q5L/M1y3u.V5S.p5R.z5X5Y5Z5a5b5c5d5e5f5g5h5i5j5k5l5m5n5o5p5q5r5s5t5u1234567890abcdefghij'
-        const correctAdminHash = '$2b$10$rWORt9sd2/UfeSvZScN4Q.FD74Dlq0K462.ZmDgZcJRRH9xNeMzWm'; // <<< GANTI DENGAN HASH ADMIN123 YANG SUDAH ANDA GENERATE
+    // Hash admin password yang sudah ada di kode Anda
+    const correctAdminHash = '$2b$10$rWORt9sd2/UfeSvZScN4Q.FD74Dlq0K462.ZmDgZcJRRH9xNeMzWm'; // Hash untuk 'admin123'
 
-        // Bandingkan password yang dimasukkan dengan hash yang tersimpan
-        const isMatch = await bcrypt.compare(password, correctAdminHash);
-        if (isMatch) {
-            // Buat token JWT untuk admin
-            const token = jwt.sign({ id: 'admin-id', username: username, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
-            return res.json({ token });
+    if (username === 'admin') {
+        try {
+            const isMatch = await bcrypt.compare(password, correctAdminHash);
+            if (isMatch) {
+                const token = jwt.sign({ id: 'admin-id', username: username, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
+                return res.json({ token, role: 'admin' }); // Sertakan role
+            }
+        } catch (error) {
+            console.error('Error during admin bcrypt compare:', error);
+            return res.status(500).json({ message: 'Internal server error during authentication.' });
         }
     }
     res.status(401).json({ message: 'Invalid credentials' });
@@ -90,19 +101,16 @@ app.post('/api/users/register', async (req, res) => {
     }
 
     try {
-        // Cek apakah username atau email sudah ada
         const userExists = await pool.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
         if (userExists.rows.length > 0) {
             return res.status(409).json({ message: 'Username atau email sudah terdaftar.' });
         }
 
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Simpan user ke database
         const result = await pool.query(
-            'INSERT INTO users (username, password_hash, email) VALUES ($1, $2, $3) RETURNING id, username, email',
-            [username, hashedPassword, email]
+            'INSERT INTO users (username, password_hash, email, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
+            [username, hashedPassword, email, 'user'] // Tambahkan role 'user' secara default
         );
         res.status(201).json({ message: 'Pendaftaran berhasil!', user: result.rows[0] });
 
@@ -121,7 +129,6 @@ app.post('/api/users/login', async (req, res) => {
     }
 
     try {
-        // Cari user berdasarkan username ATAU email
         const userResult = await pool.query('SELECT * FROM users WHERE username = $1 OR email = $1', [identifier]);
         const user = userResult.rows[0];
 
@@ -129,16 +136,14 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(401).json({ message: 'Username/Email atau password salah.' });
         }
 
-        // Bandingkan password
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
             return res.status(401).json({ message: 'Username/Email atau password salah.' });
         }
 
-        // Buat token JWT untuk user
-        const token = jwt.sign({ id: user.id, username: user.username, role: 'user' }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
-        res.json({ message: 'Login berhasil!', token, user: { id: user.id, username: user.username, email: user.email } });
+        res.json({ message: 'Login berhasil!', token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
 
     } catch (err) {
         console.error('Error during user login:', err);
@@ -148,76 +153,154 @@ app.post('/api/users/login', async (req, res) => {
 
 // Endpoint untuk mendapatkan informasi user yang sedang login (membutuhkan token JWT)
 app.get('/api/current_user', authenticateToken, (req, res) => {
-    // req.user akan terisi dari middleware authenticateToken
-    if (req.user && req.user.role === 'user') {
-        res.json({
-            id: req.user.id,
-            username: req.user.username,
-            email: req.user.email // Menyertakan email jika ada di payload token
-        });
-    } else {
-        // Ini juga bisa berarti token admin yang dikirim ke endpoint user, atau token tidak valid
-        res.status(401).json({ message: 'Unauthorized or not a regular user.' });
-    }
+    // req.user sudah berisi id, username, dan role dari payload JWT
+    // Anda bisa menambahkan email ke payload JWT saat login jika ingin selalu tersedia
+    res.json({
+        id: req.user.id,
+        username: req.user.username,
+        role: req.user.role,
+        // email: req.user.email // Tambahkan ini jika email dimasukkan ke dalam token saat login
+    });
 });
 
+// --- NEW ROUTES FOR CATEGORIES ---
 
-// --- Rute API Berita (News) ---
-
-// Endpoint untuk Mengambil Semua Berita (READ ALL)
-app.get('/api/news', async (req, res) => {
+// Endpoint untuk mendapatkan semua kategori
+app.get('/api/categories', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM news ORDER BY date DESC');
+        const result = await pool.query('SELECT id, name FROM categories ORDER BY name ASC');
         res.json(result.rows);
     } catch (err) {
-        console.error('Error fetching all news:', err);
+        console.error('Error fetching categories:', err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 
-// Endpoint untuk Mengambil Berita Berdasarkan ID (READ ONE)
-app.get('/api/news/:id', async (req, res) => {
-    const { id } = req.params;
+// Endpoint untuk menambahkan kategori baru (ADMIN ONLY)
+app.post('/api/categories', authenticateToken, authorizeAdmin, async (req, res) => {
+    const { name } = req.body;
+    if (!name) {
+        return res.status(400).json({ message: 'Nama kategori wajib diisi.' });
+    }
     try {
-        const result = await pool.query('SELECT * FROM news WHERE id = $1', [id]);
+        const result = await pool.query('INSERT INTO categories (name) VALUES ($1) RETURNING *', [name]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        if (err.code === '23505') { // PostgreSQL unique violation error code
+            return res.status(409).json({ message: 'Kategori dengan nama ini sudah ada.' });
+        }
+        console.error('Error adding category:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Endpoint untuk memperbarui kategori (ADMIN ONLY)
+app.put('/api/categories/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name) {
+        return res.status(400).json({ message: 'Nama kategori wajib diisi.' });
+    }
+    try {
+        const result = await pool.query('UPDATE categories SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
         if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'News not found' });
+            return res.status(404).json({ message: 'Kategori tidak ditemukan.' });
         }
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('Error fetching news by ID:', err);
+        if (err.code === '23505') { // PostgreSQL unique violation error code
+            return res.status(409).json({ message: 'Kategori dengan nama ini sudah ada.' });
+        }
+        console.error('Error updating category:', err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 
-// Endpoint untuk Mengambil Berita Berdasarkan Kategori (READ by Category)
-app.get('/api/news/category/:categoryName', async (req, res) => {
-    const { categoryName } = req.params;
+// Endpoint untuk menghapus kategori (ADMIN ONLY)
+app.delete('/api/categories/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+    const { id } = req.params;
     try {
-        const result = await pool.query('SELECT * FROM news WHERE category ILIKE $1 ORDER BY date DESC', [categoryName]); // ILIKE untuk case-insensitive
-        res.json(result.rows);
+        const result = await pool.query('DELETE FROM categories WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Kategori tidak ditemukan.' });
+        }
+        res.status(200).json({ message: 'Kategori berhasil dihapus.' });
     } catch (err) {
-        console.error('Error fetching news by category:', err);
+        if (err.code === '23503') { // PostgreSQL foreign key violation error code
+            return res.status(409).json({ message: 'Tidak dapat menghapus kategori karena masih digunakan oleh berita. Harap perbarui berita yang terkait terlebih dahulu.' });
+        }
+        console.error('Error deleting category:', err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 
-// --- Rute Admin (Membutuhkan Autentikasi JWT) ---
+// --- UPDATED ROUTES FOR NEWS ---
 
-// Endpoint untuk Menambahkan Berita Baru (CREATE)
-app.post('/api/news', authenticateToken, async (req, res) => {
-    // Hanya admin yang bisa menambah berita
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Access denied. Admin role required.' });
+// Endpoint untuk Mengambil Semua Berita atau Berita Berdasarkan Kategori (FILTER BY category_id)
+app.get('/api/news', async (req, res) => {
+    const categoryId = req.query.category_id; // Ambil category_id dari query parameter
+
+    let sql = `
+        SELECT n.id, n.title, n.content, n.image, n.date,
+               c.id AS category_id, c.name AS category_name
+        FROM news n
+        LEFT JOIN categories c ON n.category_id = c.id
+    `;
+    const params = [];
+
+    if (categoryId && categoryId !== '') { // Jika categoryId diberikan dan tidak kosong
+        sql += ` WHERE n.category_id = $1`;
+        params.push(categoryId);
     }
-    const { title, category, image, content } = req.body;
-    if (!title || !category || !content) {
-        return res.status(400).json({ message: 'Judul, kategori, dan konten berita wajib diisi.' });
+
+    sql += ` ORDER BY n.date DESC`; // Urutkan dari terbaru
+
+    try {
+        const result = await pool.query(sql, params);
+        res.json(result.rows); // Mengembalikan baris seperti adanya, karena category_id dan category_name sudah ada
+    } catch (err) {
+        console.error('Error fetching news with categories:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Endpoint untuk Mengambil Berita Berdasarkan ID (READ ONE) - Menggunakan JOIN ke categories
+app.get('/api/news/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT n.id, n.title, n.content, n.image, n.date,
+                   c.id AS category_id, c.name AS category_name
+            FROM news n
+            LEFT JOIN categories c ON n.category_id = c.id
+            WHERE n.id = $1
+        `, [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'News not found' });
+        }
+        res.json(result.rows[0]); // Mengembalikan objek berita langsung
+    } catch (err) {
+        console.error('Error fetching news by ID with categories:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Endpoint untuk Menambahkan Berita Baru (CREATE) - Sekarang menerima category_id
+app.post('/api/news', authenticateToken, authorizeAdmin, async (req, res) => {
+    const { title, category_id, image, content } = req.body; // Mengambil category_id
+    if (!title || !category_id || !content) {
+        return res.status(400).json({ message: 'Judul, ID kategori, dan konten berita wajib diisi.' });
     }
     try {
+        // Pastikan category_id valid
+        const categoryExists = await pool.query('SELECT id FROM categories WHERE id = $1', [category_id]);
+        if (categoryExists.rows.length === 0) {
+            return res.status(400).json({ message: 'ID Kategori tidak valid.' });
+        }
+
         const result = await pool.query(
-            'INSERT INTO news (title, category, image, content, date) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-            [title, category, image, content]
+            'INSERT INTO news (title, category_id, image, content, date) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+            [title, category_id, image, content]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -226,20 +309,23 @@ app.post('/api/news', authenticateToken, async (req, res) => {
     }
 });
 
-// Endpoint untuk Memperbarui Berita (UPDATE)
-app.put('/api/news/:id', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Access denied. Admin role required.' });
-    }
+// Endpoint untuk Memperbarui Berita (UPDATE) - Sekarang menerima category_id
+app.put('/api/news/:id', authenticateToken, authorizeAdmin, async (req, res) => {
     const { id } = req.params;
-    const { title, category, image, content } = req.body;
-    if (!title || !category || !content) {
-        return res.status(400).json({ message: 'Judul, kategori, dan konten berita wajib diisi.' });
+    const { title, category_id, image, content } = req.body; // Mengambil category_id
+    if (!title || !category_id || !content) {
+        return res.status(400).json({ message: 'Judul, ID kategori, dan konten berita wajib diisi.' });
     }
     try {
+        // Pastikan category_id valid
+        const categoryExists = await pool.query('SELECT id FROM categories WHERE id = $1', [category_id]);
+        if (categoryExists.rows.length === 0) {
+            return res.status(400).json({ message: 'ID Kategori tidak valid.' });
+        }
+
         const result = await pool.query(
-            'UPDATE news SET title = $1, category = $2, image = $3, content = $4 WHERE id = $5 RETURNING *',
-            [title, category, image, content, id]
+            'UPDATE news SET title = $1, category_id = $2, image = $3, content = $4 WHERE id = $5 RETURNING *',
+            [title, category_id, image, content, id]
         );
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'News not found' });
@@ -252,10 +338,7 @@ app.put('/api/news/:id', authenticateToken, async (req, res) => {
 });
 
 // Endpoint untuk Menghapus Berita (DELETE)
-app.delete('/api/news/:id', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Access denied. Admin role required.' });
-    }
+app.delete('/api/news/:id', authenticateToken, authorizeAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         const result = await pool.query('DELETE FROM news WHERE id = $1 RETURNING *', [id]);

@@ -1,13 +1,14 @@
+// app.js
 document.addEventListener('DOMContentLoaded', function() {
     const newsContainer = document.getElementById('news-container');
-    const categoryFilter = document.getElementById('category-filter');
-
+    const categoryFilterContainer = document.getElementById('category-filter-container'); // Ambil wadah tombol filter
+    
     // Elemen-elemen untuk User Login
-    // eslint-disable-next-line no-unused-vars
-    const userInfoSection = document.getElementById('user-info-section'); // Disertakan untuk referensi jika dibutuhkan, tapi bisa diabaikan jika tidak langsung digunakan
     const welcomeMessage = document.getElementById('welcome-message');
-    const userLoginBtn = document.getElementById('user-login-btn'); // Tombol "Login / Daftar"
-    const userLogoutBtn = document.getElementById('user-logout-btn'); // Tombol "Logout"
+    const userLoginBtn = document.getElementById('user-login-btn');
+    const userLogoutBtn = document.getElementById('user-logout-btn');
+
+    let currentCategoryId = ''; // Menyimpan ID kategori yang sedang aktif difilter
 
     // Fungsi untuk memformat tanggal
     function formatDate(dateString) {
@@ -17,10 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fungsi untuk mengecek status login pengguna (menggunakan token JWT di localStorage)
     async function checkLoginStatus() {
-        const userToken = localStorage.getItem('userToken'); // Ambil token user dari localStorage
+        const userToken = localStorage.getItem('userToken');
 
         if (!userToken) {
-            // User belum login, tampilkan tombol login, sembunyikan tombol logout dan pesan selamat datang
             welcomeMessage.textContent = '';
             if (userLoginBtn) userLoginBtn.style.display = 'inline-block';
             if (userLogoutBtn) userLogoutBtn.style.display = 'none';
@@ -28,45 +28,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            // Kirim token ke backend untuk memverifikasi dan mendapatkan info user
             const response = await fetch('http://localhost:3000/api/current_user', {
                 headers: {
-                    'Authorization': `Bearer ${userToken}` // Kirim token di header Authorization (penting!)
+                    'Authorization': `Bearer ${userToken}`
                 }
             });
 
             if (response.ok) {
                 const user = await response.json();
-                // User berhasil diverifikasi dan login
-                welcomeMessage.textContent = `Selamat datang, ${user.username}!`; // Tampilkan username
+                welcomeMessage.textContent = `Selamat datang, ${user.username}!`;
                 if (userLoginBtn) userLoginBtn.style.display = 'none';
                 if (userLogoutBtn) userLogoutBtn.style.display = 'inline-block';
             } else {
-                // Token tidak valid atau expired (misal, 401 Unauthorized, 403 Forbidden)
-                localStorage.removeItem('userToken'); // Hapus token yang tidak valid dari localStorage
+                // Token tidak valid atau expired
+                localStorage.removeItem('userToken');
                 welcomeMessage.textContent = '';
                 if (userLoginBtn) userLoginBtn.style.display = 'inline-block';
                 if (userLogoutBtn) userLogoutBtn.style.display = 'none';
                 console.error('Invalid user token or authentication failed:', response.status);
             }
         } catch (error) {
-            // Terjadi error jaringan atau server
             console.error('Error checking login status:', error);
-            localStorage.removeItem('userToken'); // Hapus token jika ada error
+            localStorage.removeItem('userToken');
             welcomeMessage.textContent = '';
             if (userLoginBtn) userLoginBtn.style.display = 'inline-block';
             if (userLogoutBtn) userLogoutBtn.style.display = 'none';
         }
     }
 
-    // Fungsi untuk memuat dan menampilkan berita berdasarkan kategori
-    async function fetchAndDisplayNews(category = 'all') {
-        if (newsContainer) newsContainer.innerHTML = '<p>Memuat berita...</p>'; // Tampilkan pesan loading
+    // Fungsi untuk memuat dan menampilkan berita berdasarkan categoryId
+    async function fetchAndDisplayNews(categoryId = '') {
+        if (newsContainer) newsContainer.innerHTML = '<p>Memuat berita...</p>'; 
 
         try {
             let url = 'http://localhost:3000/api/news';
-            if (category && category !== 'all') {
-                url = `http://localhost:3000/api/news/category/${encodeURIComponent(category)}`;
+            if (categoryId && categoryId !== '') { // Jika categoryId diberikan dan tidak kosong
+                url += `?category_id=${categoryId}`; 
             }
 
             const response = await fetch(url);
@@ -85,12 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (newsContainer) newsContainer.innerHTML = ''; // Kosongkan kontainer
             newsData.forEach(newsItem => {
+                // newsItem.category_name digunakan karena JOIN di backend
                 const newsCard = `
                     <a href="detail.html?id=${newsItem.id}" class="news-card-link">
                         <div class="news-card">
-                            <img src="${newsItem.image}" alt="${newsItem.title}">
+                            <img src="${newsItem.image || 'https://via.placeholder.com/400x200?text=No+Image'}" alt="${newsItem.title}">
                             <div class="news-card-content">
-                                <span class="category">${newsItem.category}</span>
+                                <span class="category">${newsItem.category_name || 'Tidak Diketahui'}</span>
                                 <h3>${newsItem.title}</h3>
                                 <p class="date">Dipublikasikan pada: ${formatDate(newsItem.date)}</p>
                             </div>
@@ -102,6 +100,55 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error fetching news:', error);
             if (newsContainer) newsContainer.innerHTML = '<p>Gagal memuat berita. Silakan coba lagi nanti.</p>';
+        }
+    }
+
+    // Fungsi untuk memuat dan menampilkan tombol filter kategori dari backend
+    async function loadCategoryButtons() {
+        try {
+            const response = await fetch('http://localhost:3000/api/categories');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const categoriesData = await response.json();
+
+            // Hapus tombol kategori dinamis lama (biarkan "Semua Berita" yang di HTML)
+            // Mulai dari indeks 1 karena tombol "Semua Berita" adalah elemen pertama
+            while (categoryFilterContainer.children.length > 1) {
+                categoryFilterContainer.removeChild(categoryFilterContainer.lastChild);
+            }
+
+            categoriesData.forEach(category => {
+                const categoryBtn = document.createElement('button');
+                categoryBtn.className = 'category-filter-btn';
+                categoryBtn.dataset.categoryId = category.id; // Simpan ID kategori
+                categoryBtn.textContent = category.name; // Tampilkan nama kategori
+                categoryFilterContainer.appendChild(categoryBtn);
+            });
+
+            // Tambahkan event listener ke container untuk delegasi event
+            // Ini menangani klik pada semua tombol .category-filter-btn
+            categoryFilterContainer.addEventListener('click', function(event) {
+                const target = event.target;
+                if (target.classList.contains('category-filter-btn')) {
+                    // Hapus kelas 'active' dari semua tombol
+                    document.querySelectorAll('.category-filter-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    // Tambahkan kelas 'active' ke tombol yang diklik
+                    target.classList.add('active');
+                    
+                    currentCategoryId = target.dataset.categoryId; // Ambil ID dari data-attribute
+                    fetchAndDisplayNews(currentCategoryId); // Muat berita dengan filter baru
+                }
+            });
+
+        } catch (error) {
+            console.error('Error loading category filters:', error);
+            // Opsional: Tampilkan pesan error di UI jika kategori gagal dimuat
+            // const errorMessage = document.createElement('p');
+            // errorMessage.textContent = 'Gagal memuat filter kategori.';
+            // categoryFilterContainer.appendChild(errorMessage);
         }
     }
 
@@ -120,16 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Anda telah berhasil logout.'); // Notifikasi sederhana ke user
         });
     }
-
-    // Event listener untuk perubahan filter kategori
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', function() {
-            const selectedCategory = this.value;
-            fetchAndDisplayNews(selectedCategory); // Muat berita sesuai kategori yang dipilih
-        });
-    }
     
     // Panggil fungsi saat halaman utama dimuat
     checkLoginStatus(); // Cek status login saat halaman dimuat
-    fetchAndDisplayNews(categoryFilter ? categoryFilter.value : 'all'); // Muat berita awal (semua kategori atau sesuai filter default)
+    loadCategoryButtons(); // Muat tombol-tombol kategori
+    fetchAndDisplayNews(); // Muat semua berita secara default saat pertama kali loading
 });

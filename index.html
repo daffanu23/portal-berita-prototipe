@@ -5,31 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Berita</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Styling tambahan untuk tombol filter kategori */
+        #category-filter-container {
+            margin-top: 20px; /* Jarak dari navigasi utama */
+            margin-bottom: 20px; /* Jarak ke konten berita */
+            display: flex;
+            flex-wrap: wrap; /* Untuk tombol yang banyak agar bisa wrap ke baris baru */
+            gap: 10px; /* Jarak antar tombol */
+            justify-content: center; /* Pusatkan tombol */
+            padding: 0 10px; /* Padding agar tidak terlalu mepet tepi */
+            width: 100%; /* Memastikan kontainer mengambil lebar penuh */
+        }
+
+        .category-filter-btn {
+            background-color: #007bff; /* Warna biru standar */
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            white-space: nowrap; /* Mencegah teks tombol pecah baris */
+        }
+
+        .category-filter-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px); /* Efek hover ringan */
+        }
+
+        .category-filter-btn.active {
+            background-color: #28a745; /* Warna hijau untuk tombol aktif */
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sedikit bayangan untuk tombol aktif */
+        }
+        .category-filter-btn.active:hover {
+            background-color: #218838;
+        }
+
+        /* Adjust header layout to accommodate filter buttons */
+        header .container {
+            display: flex;
+            flex-direction: column; /* Mengubah tata letak agar item header berada di atas item filter */
+            align-items: center; /* Pusatkan item secara horizontal */
+            padding: 10px 20px;
+            background-color: #333; /* Contoh warna header */
+            color: white;
+        }
+
+        header .main-nav-row {
+            width: 100%; /* Memastikan elemen ini mengambil lebar penuh untuk tata letak yang bersih */
+            display: flex;
+            justify-content: space-between; /* Untuk logo/nav dan user-info */
+            align-items: center;
+            margin-bottom: 10px; /* Jarak antara nav dan filter */
+        }
+
+        header h1 {
+            margin: 0; /* Hapus margin default h1 */
+        }
+
+        header nav a,
+        header nav div {
+            margin-bottom: 0; /* Hapus margin bawah default jika ada */
+        }
+
+    </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <h1><a href="index.html">Portal Berita</a></h1>
-            <nav>
-                <a href="admin/admin.html">Admin</a>
-                <div id="user-info-section" style="margin-left: 20px; display: flex; align-items: center;">
-                    <span id="welcome-message" style="margin-right: 10px; color: white;"></span>
-                    <button id="user-login-btn" class="btn" style="background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Login / Daftar</button>
-                    <button id="user-logout-btn" class="btn" style="background-color: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: none;">Logout</button>
-                </div>
-            </nav>
-            <div class="filter-controls">
-                <label for="category-filter">Filter Kategori:</label>
-                <select id="category-filter">
-                    <option value="all">Semua Kategori</option>
-                    <option value="Teknologi">Teknologi</option>
-                    <option value="Olahraga">Olahraga</option>
-                    <option value="Gaya Hidup">Gaya Hidup</option>
-                    <option value="Nasional">Nasional</option>
-                    <option value="Internasional">Internasional</option>
-                    <option value="Hiburan">Hiburan</option>
-                </select>
+            <div class="main-nav-row">
+                <h1><a href="index.html">Portal Berita</a></h1>
+                <nav>
+                    <a href="admin/dashboard.html">Admin</a>
+                    <div id="user-info-section" style="margin-left: 20px; display: flex; align-items: center;">
+                        <span id="welcome-message" style="margin-right: 10px; color: white;"></span>
+                        <button id="user-login-btn" class="btn" style="background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Login / Daftar</button>
+                        <button id="user-logout-btn" class="btn" style="background-color: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: none;">Logout</button>
+                    </div>
+                </nav>
             </div>
+            
+            <div id="category-filter-container">
+                <button class="category-filter-btn active" data-category-id="">Semua Berita</button>
+                </div>
         </div>
     </header>
 

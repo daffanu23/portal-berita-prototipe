@@ -4,59 +4,217 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Portal Berita</title>
-    <link rel="stylesheet" href="../style.css"> <style>
-        /* Tambahan styling spesifik untuk admin */
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        /* Styling Umum untuk Dashboard */
+        body.admin-page {
+            background-color: #f4f7f6; /* Warna latar belakang umum dashboard */
+            color: #333;
+            font-family: Arial, sans-serif;
+        }
+
+        .admin-header {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .admin-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .admin-header nav {
+            display: flex;
+            align-items: center;
+            gap: 15px; /* Jarak antar item navigasi */
+        }
+
+        .admin-header nav button {
+            background-color: #007bff; /* Biru */
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .admin-header nav button:hover {
+            background-color: #0056b3;
+        }
+
+        .admin-header nav button#logout-button {
+            background-color: #dc3545; /* Merah */
+        }
+
+        .admin-header nav button#logout-button:hover {
+            background-color: #c82333;
+        }
+        
+        .admin-header nav button.active-tab {
+            background-color: #28a745; /* Hijau untuk tab aktif */
+        }
+        .admin-header nav button.active-tab:hover {
+            background-color: #218838;
+        }
+
+        /* Konten utama dashboard */
+        main {
+            padding: 20px;
+            max-width: 1000px; /* Batasi lebar konten utama */
+            margin: 20px auto;
+        }
+
         .admin-section {
             margin-bottom: 40px;
             padding: 20px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none; /* Sembunyikan secara default */
         }
+        .admin-section.active {
+            display: block; /* Tampilkan yang aktif */
+        }
+
         .admin-section h2 {
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
             margin-bottom: 20px;
+            color: #333;
+            font-size: 1.5rem;
         }
-        .news-list {
+
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="url"],
+        .form-group textarea,
+        .form-group select {
+            width: calc(100% - 22px); /* Mengakomodasi padding */
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; /* Penting agar padding tidak menambah lebar */
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        button[type="submit"],
+        button[type="button"] {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button[type="submit"] {
+            background-color: #28a745; /* Hijau */
+            color: white;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+
+        #clear-form-button, #clear-category-form-button {
+            background-color: #6c757d; /* Abu-abu */
+            margin-left: 10px;
+            color: white;
+        }
+        #clear-form-button:hover, #clear-category-form-button:hover {
+            background-color: #5a6268;
+        }
+
+        /* Styling untuk pesan */
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* List Styling (Berita & Kategori) */
+        .item-list { /* Digunakan untuk news-list dan category-list */
             list-style: none;
             padding: 0;
         }
-        .news-list-item {
+        .item-list-item { /* Digunakan untuk news-list-item dan category-list-item */
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px dashed #eee;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-bottom: 8px;
         }
-        .news-list-item:last-child {
+        .item-list-item:last-child {
             border-bottom: none;
         }
-        .news-actions button {
-            margin-left: 10px;
-            padding: 5px 10px;
-            font-size: 0.9rem;
-        }
-        .news-actions .edit-btn {
-            background-color: #ffc107;
+        .item-list-item span {
+            flex-grow: 1;
+            font-size: 1.1rem;
             color: #333;
         }
-        .news-actions .edit-btn:hover {
+        .actions button {
+            margin-left: 8px;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .actions .edit-btn {
+            background-color: #ffc107; /* Kuning */
+            color: #333;
+        }
+        .actions .edit-btn:hover {
             background-color: #e0a800;
         }
-        .news-actions .delete-btn {
-            background-color: #dc3545;
+        .actions .delete-btn {
+            background-color: #dc3545; /* Merah */
+            color: white;
         }
-        .news-actions .delete-btn:hover {
+        .actions .delete-btn:hover {
             background-color: #c82333;
         }
-        #clear-form-button {
-            background-color: #6c757d; /* Abu-abu */
-            margin-left: 10px;
-        }
-        #clear-form-button:hover {
-            background-color: #5a6268;
-        }
+
         /* Styling untuk select dropdown */
         .form-group select {
             width: 100%;
@@ -82,15 +240,19 @@
     <header class="admin-header">
         <h1>Admin Dashboard</h1>
         <nav>
-            <a href="../index.html" style="color: white; text-decoration: none; margin-right: 15px;">Lihat Berita</a> <button id="logout-button" style="background-color: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Logout</button>
+            <button id="show-news-btn" class="active-tab">Manajemen Berita</button>
+            <button id="show-categories-btn">Manajemen Kategori</button>
+            <a href="../index.html" style="color: white; text-decoration: none; margin-right: 15px;">Lihat Berita</a>
+            <button id="logout-button">Logout</button>
         </nav>
     </header>
 
     <main>
-        <section class="admin-section">
+        <section id="news-management-section" class="admin-section active">
             <h2>Tambah / Edit Berita</h2>
             <form id="news-form">
-                <input type="hidden" id="news-id"> <div class="form-group">
+                <input type="hidden" id="news-id">
+                <div class="form-group">
                     <label for="title">Judul Berita:</label>
                     <input type="text" id="title" required>
                 </div>
@@ -98,12 +260,8 @@
                 <div class="form-group">
                     <label for="news-category">Kategori:</label>
                     <select id="news-category" required>
-                        <option value="">-- Pilih Kategori --</option> <option value="Teknologi">Teknologi</option>
-                        <option value="Olahraga">Olahraga</option>
-                        <option value="Gaya Hidup">Gaya Hidup</option>
-                        <option value="Nasional">Nasional</option>
-                        <option value="Internasional">Internasional</option> <option value="Hiburan">Hiburan</option>
-                    </select>
+                        <option value="">-- Pilih Kategori --</option>
+                        </select>
                 </div>
 
                 <div class="form-group">
@@ -120,20 +278,41 @@
                 <button type="submit" id="submit-button">Tambah Berita</button>
                 <button type="button" id="clear-form-button">Clear Form</button>
             </form>
-            <p id="form-message" class="error-message" style="color: green;"></p>
+            <p id="news-form-message" class="message"></p>
         </section>
 
-        <section class="admin-section">
+        <section id="news-list-section" class="admin-section active">
             <h2>Daftar Berita</h2>
-            <ul id="news-list" class="news-list">
+            <ul id="news-list" class="item-list">
                 <p>Memuat daftar berita...</p>
             </ul>
         </section>
+
+        <section id="category-management-section" class="admin-section">
+            <h2>Manajemen Kategori</h2>
+            <form id="category-form">
+                <input type="hidden" id="category-id">
+                <div class="form-group">
+                    <label for="category-name">Nama Kategori:</label>
+                    <input type="text" id="category-name" required>
+                </div>
+                <button type="submit" id="submit-category-button">Tambah Kategori</button>
+                <button type="button" id="clear-category-form-button">Clear Form</button>
+            </form>
+            <p id="category-form-message" class="message"></p>
+
+            <h3 style="margin-top: 40px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Daftar Kategori</h3>
+            <ul id="category-list" class="item-list">
+                <p>Memuat daftar kategori...</p>
+            </ul>
+        </section>
+        
     </main>
 
     <footer>
         <p>&copy; 2025 Admin Portal Berita</p>
     </footer>
 
-    <script src="admin.js"></script> </body>
+    <script src="admin.js"></script>
+</body>
 </html>
